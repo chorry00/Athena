@@ -249,7 +249,7 @@ button:focus-visible { outline: 2px solid var(--cursor); outline-offset: 2px; }
 <script>
 'use strict';
 // ================= constants & helpers =================
-const T = 16, MW = 56, MH = 32, INV_MAX = 20, STORE_MAX = 100, LAST = 20, BAG_MAX = 3;
+const T = 16, MW = 56, MH = 32, INV_MAX = 30, STORE_MAX = 100, LAST = 20, BAG_MAX = 3;
 const SAVE_KEY = 'maboroshi-save-v2';
 const DIRS8 = [[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1]];
 const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
@@ -335,6 +335,7 @@ const SPR = {
   sword: ['................','............kk..','...........klwk.','..........klwk..','.........klwk...','........klwk....',
     '..kk...klwk.....','..kyk.klwk......','...kykkwk.......','....kyyk........','...kNkyyk.......','..kNk..kyk......',
     '.kNk....kk......','.kk.............','................','................'],
+  club: ['................','...........kkk..','..........knnnk.','.........knNnnnk','........knnnnNnk','.......knnNnnnk.','......knnnnnnk..','.....knnnNnkk...','....knnnnkk.....','...kNnnk........','..kNnnk.........','..kNNk..........','.kNNk...........','.kNk............','..k.............','................'],
   spear: ['................','............kk..','...........klwk.','..........kllk..','..........klk...','.........knk....',
     '........knk.....','.......knk......','......knk.......','.....knk........','....knk.........','...knk..........',
     '..knk...........','..kk............','................','................'],
@@ -460,7 +461,7 @@ const IT = {
   w_blow:   { n:'ふきとばしの杖', c:'wand', s:'wand', pal:{ b:'#40a060', c:'#a0f0b0' }, price:300, d:'前方の敵を遠くへふきとばす。' },
   w_swap:   { n:'場所がえの杖', c:'wand', s:'wand', pal:{ b:'#d06020', c:'#f8c090' }, price:250, d:'前方の敵と位置を入れかえる。' },
   w_slow:   { n:'鈍足の杖', c:'wand', s:'wand', pal:{ b:'#4878e0', c:'#a8d0f8' }, price:300, d:'前方の敵の動きを遅くする。' },
-  club:     { n:'こん棒', c:'weapon', s:'sword', pal:{ l:'#a06830', w:'#d09858', y:'#a06830' }, pow:2, fl:1 },
+  club:     { n:'こん棒', c:'weapon', s:'club', pal:{ n:'#b07840', N:'#6a4020' }, pow:2, fl:1 },
   copper:   { n:'銅の剣', c:'weapon', s:'sword', pal:{ l:'#c87838', w:'#f0b070' }, pow:4, fl:1 },
   bspear:   { n:'青銅の槍', c:'weapon', s:'spear', pal:{ l:'#d09048', w:'#f8c880' }, pow:6, fl:3 },
   iron:     { n:'鉄の剣', c:'weapon', s:'sword', pow:8, fl:5 },

@@ -1,6 +1,6 @@
 // Service worker: keeps a full copy of the game so it runs offline.
 // tools/build.py fills in the version; a new version replaces the old cache on the next launch.
-const CACHE = 'dicteon-cd9471fcfd';
+const CACHE = 'dicteon-3b5c6932cb';
 const ASSETS = ["./", "index.html", "manifest.webmanifest", "fonts/DotGothic16-subset.woff2", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener('install', event => {
