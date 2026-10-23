@@ -524,7 +524,7 @@ const UNIQ = {
   nike:    { n:'ニケの腕輪', b:'gbr', fl:10, af:[['crit',15],['exp',40]], f:'勝利の女神の翼をかたどった腕輪。' },
   keraunos:{ n:'雷霆ケラウノス', b:'mspear', fl:12, af:[['fire',10],['crit',10]], f:'大神の雷を宿した槍。' },
   gorgon:  { n:'ゴルゴンの腕輪', b:'gbr', fl:12, af:[['thorns',10],['def',5],['rthief',1]], f:'見る者を石にする瞳がはめこまれている。' },
-  aegis:   { n:'アイギスの盾', b:'starsh', fl:14, af:[['def',6],['dodge',8],['rpoison',1],['rsleep',1]], f:'女神アテナ自身の盾。あらゆる災いをはねかえす。' },
+  aegis:   { n:'アイギスの盾', b:'starsh', fl:14, af:[['def',6],['dodge',8],['rpoison',1],['rsleep',1]], f:'女神あてな自身の盾。あらゆる災いをはねかえす。' },
 };
 const EXP = [0, 0, 10, 25, 50, 90, 150, 240, 360, 520, 730, 1000, 1350, 1800, 2400, 3200, 4200, 5500, 7200, 9400, 12000,
   15000, 18500, 22500, 27000, 32000, 38000, 45000, 53000, 62000, 72000, 99999999];
@@ -1253,7 +1253,7 @@ function attackMonster(m) {
   bump(p, m.x - p.x, m.y - p.y);
   revealMimic(m);
   m.sleep = 0; m.aware = true; m.lx = p.x; m.ly = p.y;
-  if (!chance(0.95)) { msg(`アテナの攻撃は ${d.n} にかわされた。`); sfx('miss'); return; }
+  if (!chance(0.95)) { msg(`あてなの攻撃は ${d.n} にかわされた。`); sfx('miss'); return; }
   const crit = chance((3 + st.crit) / 100);
   let dmg;
   if (d.treasure) dmg = crit ? 3 : 1;
@@ -1304,7 +1304,7 @@ function levelUp() {
   const p = G.player, up = rint(3, 5);
   p.lv++; p.mhp += up; p.hp += up;
   if (p.exp < EXP[p.lv]) p.exp = EXP[p.lv];
-  msg(`アテナは レベル ${p.lv} に上がった！`);
+  msg(`あてなは レベル ${p.lv} に上がった！`);
   if (G.owl && G.owl.hp > 0) { G.owl.mhp += 3; G.owl.hp += 3; }
   floatText(p.x, p.y, '+' + up, '#7cf09a');
   sfx('lvup');
@@ -1488,7 +1488,7 @@ function scheduleSleep() {
     UI.sleepT = 0;
     const p = G && G.player;
     if (!p || p.hp <= 0 || p.sleep <= 0) return;
-    if (--p.sleep === 0) msg('アテナは 目をさました。');
+    if (--p.sleep === 0) msg('あてなは 目をさました。');
     endTurn();
   }, 170);
 }
@@ -1664,7 +1664,7 @@ function useItem(it) {
     case 'herb': removeInv(it); msg('薬草を飲んだ。'); healPlayer(30, 1); sfx('eat'); break;
     case 'hiherb': removeInv(it); msg('上薬草を飲んだ。'); healPlayer(100, 2); sfx('eat'); break;
     case 'antidote': removeInv(it); p.str = Math.max(p.str, p.mstr); msg('毒消し草を飲んだ。力が 元にもどった。'); sfx('eat'); break;
-    case 'sleepherb': removeInv(it); if (st.rsleep) msg('眠り草を飲んだが 眠くならなかった。'); else { p.sleep = 5; msg('眠り草を飲んだ。アテナは 眠ってしまった…'); } break;
+    case 'sleepherb': removeInv(it); if (st.rsleep) msg('眠り草を飲んだが 眠くならなかった。'); else { p.sleep = 5; msg('眠り草を飲んだ。あてなは 眠ってしまった…'); } break;
     case 'confherb': removeInv(it); p.conf = 10; msg('混乱草を飲んだ。目がまわる…'); break;
     case 'happyherb': removeInv(it); msg('しあわせ草を飲んだ。'); p.exp = EXP[p.lv + 1]; levelUp(); break;
     case 'strseed': removeInv(it); p.mstr++; p.str++; msg('力の種を食べた。力が 1 上がった！'); sfx('lvup'); break;
@@ -1701,7 +1701,7 @@ function useItem(it) {
       if (G.player.inv.some(isUnknown)) UI.pendingIdent = true;
       else msg('しかし 正体の わからない物は 持っていない。');
       break;
-    case 's_escape': removeInv(it); msg('脱出の巻物を読んだ。アテナの体が 光につつまれた…'); sfx('magic');
+    case 's_escape': removeInv(it); msg('脱出の巻物を読んだ。あてなの体が 光につつまれた…'); sfx('magic');
       UI.mode = 'busy'; { const g = G; setTimeout(() => { if (G === g) endRun('escape'); }, 800); } return false;
     default:
       if (d.c === 'wand') return zapWand(it);
@@ -1800,7 +1800,7 @@ function startRun(floor) {
   G.player.hp = maxHp();
   UI.mode = 'play';
   nextFloor();
-  msg(`アテナは ディクテオンの迷宮 B${floor}F に 降りたった。`);
+  msg(`あてなは ディクテオンの迷宮 B${floor}F に 降りたった。`);
   renderHUD(); renderMsg();
 }
 function endRun(kind) {
@@ -2168,7 +2168,7 @@ function helpHTML() {
   return `<div class="note"><b>目的</b>：地下${LAST}階の「まぼろしの宝玉」。でも本当の楽しみは 宝さがし。<br>
     <b>装備の色</b>：<span class="r1">マジック</span>・<span class="r2">レア</span>・<span class="r3">伝説</span>・<span class="r4">神器</span>。光の柱が立ったら 良い物です。<br>
     <b>識別</b>：草・実・巻物・杖は 冒険ごとに「赤い草」などの仮の名前で出てきます。使うと 正体がわかります。拾った装備は「？」付きで、追加性能が かくれています。識別の巻物、${GEAR_ID_TURNS}ターン装備しつづける、神殿へ持ち帰る、のどれかで 正体がわかります。<br>
-    <b>グラウクス</b>：アテナの相棒のフクロウ。ついてきて 敵をつつき、ミミックや いい物を 見つけると 鳴いて知らせます。ぶつかると 場所を入れかわります。たおれても 次の冒険で また来てくれます。<br>
+    <b>グラウクス</b>：あてなの相棒のフクロウ。ついてきて 敵をつつき、ミミックや いい物を 見つけると 鳴いて知らせます。ぶつかると 場所を入れかわります。たおれても 次の冒険で また来てくれます。<br>
     <b>宝箱</b>：上に乗るとあきます。たまにミミック。<b>きんぴかスライム</b>は逃げ足が速いけれど 倒すとレア以上を落とします。<br>
     <b>倒れたら</b>：持ち物とお金は「遺品の袋」としてその階に残ります。次の冒険でその階に行けば 回収でき、中身は倉庫へ届きます（袋は最大${BAG_MAX}つ）。<br>
     <b>操作</b>：十字キーで移動・斜め移動。画面をタップしても その方向へ動きます。ダッシュをONにすると 通路を走ります。「向き」をONにすると 向きだけ変えられます（杖・投げる方向）。</div>
@@ -2242,7 +2242,7 @@ function showResult(res) {
 }
 function renderResult(res) {
   const ok = res.kind !== 'dead';
-  const headTxt = { dead: 'アテナは 力つきた…', escape: '神殿へ 帰還した', circle: '魔法陣で 帰還した', clear: 'まぼろしの宝玉を 手に入れた！' }[res.kind];
+  const headTxt = { dead: 'あてなは 力つきた…', escape: '神殿へ 帰還した', circle: '魔法陣で 帰還した', clear: 'まぼろしの宝玉を 手に入れた！' }[res.kind];
   sheet.innerHTML = `<div class="panel title">
     <h1 style="font-size:clamp(24px,7.5vw,44px)">${headTxt}</h1>
     <div class="sub">${ok ? `持ち物 ${res.n}個と ${res.gold}G を 持ち帰った。` : `B${res.floor}F で ${esc(res.cause || '何者か')} に たおされた。`}</div>
