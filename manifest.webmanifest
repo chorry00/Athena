@@ -1,8 +1,8 @@
 {
-  "name": "ディクテオンの洞窟",
+  "name": "ディクテオンの迷宮",
   "short_name": "ディクテオン",
   "lang": "ja",
-  "description": "女神アテナの宝さがしローグライク",
+  "description": "女神あてなのお宝さがし",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

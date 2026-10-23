@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ディクテオンの洞窟</title>
+<title>ディクテオンの迷宮</title>
 <meta name="theme-color" content="#0b0a14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -79,6 +79,7 @@ button:focus-visible { outline: 2px solid var(--cursor); outline-offset: 2px; }
 .bar.food { background: #2a2014; }
 .bar.food i { background: var(--food); }
 #hud .low { color: var(--hp-low); }
+#hud .owlhp { color: #8fe8a4; }
 #hud .chip { font-size: 11px; padding: 0 5px; border-radius: 3px; background: #3a2a6a; color: #fff; }
 
 #stage { grid-area: stage; position: relative; background: #000; overflow: hidden; outline: 2px solid #2b2745; outline-offset: 1px; touch-action: none; }
@@ -336,6 +337,7 @@ const SPR = {
     '..kk...klwk.....','..kyk.klwk......','...kykkwk.......','....kyyk........','...kNkyyk.......','..kNk..kyk......',
     '.kNk....kk......','.kk.............','................','................'],
   club: ['................','...........kkk..','..........knnnk.','.........knNnnnk','........knnnnNnk','.......knnNnnnk.','......knnnnnnk..','.....knnnNnkk...','....knnnnkk.....','...kNnnk........','..kNnnk.........','..kNNk..........','.kNNk...........','.kNk............','..k.............','................'],
+  owl: ['................','..kk........kk..','..knk......knk..','..knnkkkkkknnk..','..knnnnnnnnnnk..','.knyyynnnnyyynk.','.knykynnnnykynk.','.knyyynoonyyynk.','.knnnnnoonnnnnk.','kNnnllllllllnnNk','kNnllllllllllnNk','.kNnllllllllnNk.','..kNnllllllnNk..','...kNNnnnnNNk...','....kok..kok....','................'],
   spear: ['................','............kk..','...........klwk.','..........kllk..','..........klk...','.........knk....',
     '........knk.....','.......knk......','......knk.......','.....knk........','....knk.........','...knk..........',
     '..knk...........','..kk............','................','................'],
@@ -393,8 +395,8 @@ function spr(name, pal, white, frame = 0) {
 }
 const iconCache = new Map();
 function iconFor(it) {
-  const d = IT[it.k], key = it.k;
-  if (!iconCache.has(key)) iconCache.set(key, spr(d.s, d.pal).toDataURL());
+  const d = IT[it.k], key = it.k + (kindUnknown(it.k) ? '|' + G.looks[it.k] : '');
+  if (!iconCache.has(key)) iconCache.set(key, spr(d.s, palOf(it)).toDataURL());
   return iconCache.get(key);
 }
 const GLYPH = {
@@ -455,6 +457,7 @@ const IT = {
   s_map:    { n:'あかりの巻物', c:'scroll', s:'scroll', pal:{ r:'#f8d838' }, price:200, d:'フロアの地形・道具・宝箱の場所がすべてわかる。' },
   s_bigroom:{ n:'大部屋の巻物', c:'scroll', s:'scroll', pal:{ r:'#a06830' }, price:150, d:'フロア全体がひとつの大部屋になる。' },
   s_thunder:{ n:'いかずちの巻物', c:'scroll', s:'scroll', pal:{ r:'#f08828' }, price:300, d:'見えている敵すべてに大ダメージ。' },
+  s_ident:  { n:'識別の巻物', c:'scroll', s:'scroll', pal:{ r:'#f0f0f0' }, price:150, d:'持ち物を1つえらんで 正体を明かす。' },
   s_escape: { n:'脱出の巻物', c:'scroll', s:'scroll', pal:{ r:'#58c040' }, price:600, d:'神殿へ帰還する。持ち物もお金もすべて持ち帰れる。' },
   w_thunder:{ n:'いかずちの杖', c:'wand', s:'wand', pal:{ b:'#e8c020', c:'#fff8a0' }, price:500, d:'前方の敵に雷を放ち、大きなダメージを与える。' },
   w_sleep:  { n:'眠りの杖', c:'wand', s:'wand', pal:{ b:'#8040c0', c:'#d0a0f8' }, price:350, d:'前方の敵を眠らせる。' },
@@ -684,14 +687,59 @@ function genItem(f, boost = 0, luck = 0, equipBias = false) {
   if (cat === 'weapon' || cat === 'shield' || cat === 'bracelet') return genEquip(cat, f, boost, luck);
   if (cat === 'food') return mkItem(rollTable([['bread', 5], ['bigbread', 1]]), f);
   if (cat === 'grass') return mkItem(rollTable([['herb', 10], ['hiherb', f >= 4 ? 4 : 1], ['antidote', 3], ['strseed', 3], ['lifeberry', 2], ['sleepherb', 3], ['confherb', 3], ['happyherb', 1]]), f);
-  if (cat === 'scroll') return mkItem(rollTable([['s_weapon', 4], ['s_shield', 4], ['s_sleep', 3], ['s_map', 3], ['s_bigroom', 2], ['s_thunder', 3], ['s_escape', 2]]), f);
+  if (cat === 'scroll') return mkItem(rollTable([['s_weapon', 4], ['s_shield', 4], ['s_sleep', 3], ['s_map', 3], ['s_bigroom', 2], ['s_thunder', 3], ['s_escape', 2], ['s_ident', 6]]), f);
   if (cat === 'wand') return mkItem(pick(['w_thunder', 'w_sleep', 'w_blow', 'w_swap', 'w_slow']), f);
   return mkItem('gold', f);
 }
 const isEquip = it => ['weapon', 'shield', 'bracelet'].includes(IT[it.k].c);
+// ---- identification: each adventure gives herbs, seeds, scrolls and wands random disguises; found gear hides its traits ----
+const LOOKS = {
+  herb: [['赤い草', { g:'#e05050', G:'#902828' }], ['青い草', { g:'#5080e0', G:'#283890' }], ['黄色い草', { g:'#e8d040', G:'#a08820' }],
+    ['白い草', { g:'#e8e8e0', G:'#a0a098' }], ['紫の草', { g:'#a060d0', G:'#603090' }], ['黒い草', { g:'#606070', G:'#303038' }],
+    ['桃色の草', { g:'#f090b8', G:'#b05078' }], ['銀色の草', { g:'#c0c8d8', G:'#7880a0' }], ['まだらの草', { g:'#90b050', G:'#a07030' }], ['水色の草', { g:'#70d0e0', G:'#3888a0' }]],
+  seed: [['赤い実', { m:'#f8a0a0', r:'#d83838', R:'#902028' }], ['青い実', { m:'#a8c0f8', r:'#4878e0', R:'#283890' }],
+    ['黄色い実', { m:'#fff0a0', r:'#e8c030', R:'#a08020' }], ['紫の実', { m:'#d8b0f0', r:'#9050c0', R:'#502878' }]],
+  scroll: [['アルファの巻物', { r:'#c86060' }], ['ベータの巻物', { r:'#6080c8' }], ['ガンマの巻物', { r:'#60a060' }], ['デルタの巻物', { r:'#c8a040' }],
+    ['イプシロンの巻物', { r:'#a060c0' }], ['ゼータの巻物', { r:'#40a8b0' }], ['エータの巻物', { r:'#c07040' }], ['シータの巻物', { r:'#808898' }],
+    ['イオタの巻物', { r:'#d07090' }], ['カッパの巻物', { r:'#708040' }]],
+  wand: [['樫の杖', { b:'#8a6a3a', c:'#d0b080' }], ['樺の杖', { b:'#c8c8b8', c:'#ffffff' }], ['杉の杖', { b:'#5a8040', c:'#a0d080' }],
+    ['柳の杖', { b:'#80a070', c:'#c0e0a0' }], ['桜の杖', { b:'#d080a0', c:'#f8c0d8' }], ['楓の杖', { b:'#c05030', c:'#f09070' }], ['黒檀の杖', { b:'#404048', c:'#9090b0' }]],
+};
+function lookPool(k) { const d = IT[k]; return d.c === 'scroll' ? 'scroll' : d.c === 'wand' ? 'wand' : d.c === 'grass' ? (d.s === 'seed' ? 'seed' : 'herb') : null; }
+function makeLooks() {
+  const looks = {};
+  for (const pool of Object.keys(LOOKS)) {
+    const order = shuffle(LOOKS[pool].map((_, i) => i));
+    Object.keys(IT).filter(k => lookPool(k) === pool).forEach((k, i) => { looks[k] = order[i]; });
+  }
+  return looks;
+}
+const kindUnknown = k => !!(G && G.looks && G.looks[k] !== undefined && !(G.known && G.known[k]));
+const lookOf = k => LOOKS[lookPool(k)][G.looks[k]];
+const gearUnknown = it => !!(G && it.ui);
+const isUnknown = it => isEquip(it) ? gearUnknown(it) : kindUnknown(it.k);
+const palOf = it => kindUnknown(it.k) ? lookOf(it.k)[1] : IT[it.k].pal;
+function learn(k) {
+  if (!kindUnknown(k)) return false;
+  const look = lookOf(k)[0];
+  G.known[k] = 1;
+  msg(`${look}は ${IT[k].n}だった！`);
+  return true;
+}
+function fresh(it) { if (isEquip(it) && ((it.r || 0) >= 1 || it.plus)) it.ui = 1; return it; }
+function revealGear(it, why) {
+  if (!it.ui) return;
+  const before = itemName(it);
+  delete it.ui; delete it.wt;
+  registerFind(it);
+  msg(`${why}${before}は ${itemName(it)}だった！`);
+  sfx((it.r || 0) >= 2 ? 'rare' : 'magic');
+}
 function itemName(it) {
   const d = IT[it.k];
   if (d.c === 'gold') return `${it.amt}ゴールド`;
+  if (kindUnknown(it.k)) return lookOf(it.k)[0] + (d.c === 'wand' ? '[?]' : '');
+  if (isEquip(it) && gearUnknown(it)) return d.n + '？';
   let s = it.u ? UNIQ[it.u].n : d.n;
   if (!it.u && it.r === 1 && it.af && it.af[0]) s = AF[it.af[0].t].pre + s;
   if (!it.u && it.np) s = it.np + s;
@@ -701,6 +749,11 @@ function itemName(it) {
 }
 const powOf = it => it ? IT[it.k].pow + (it.plus || 0) + (it.u ? UNIQ[it.u].pw || 0 : 0) : 0;
 function affixSummary(it) {
+  if (kindUnknown(it.k)) return 'まだ正体が わからない。使えば わかる。';
+  if (isEquip(it) && gearUnknown(it)) {
+    const d = IT[it.k], base = d.c === 'weapon' ? `攻撃力${d.pow}+？` : d.c === 'shield' ? `防御力${d.pow}+？` : '';
+    return [base, `未識別（追加性能 ${(it.af || []).length}つ）`].filter(Boolean).join(' / ');
+  }
   if (!isEquip(it)) return IT[it.k].d || '';
   const base = IT[it.k].c === 'weapon' ? `攻撃力${powOf(it)}` : IT[it.k].c === 'shield' ? `防御力${powOf(it)}` : '';
   return [base, ...(it.af || []).map(a => AF[a.t].l(a.v))].filter(Boolean).join(' / ');
@@ -777,7 +830,8 @@ function genMap() {
 const walk = (x, y) => inb(x, y) && G.map.tiles[idx(x, y)] > 0;
 const monAt = (x, y) => G.monsters.find(m => m.x === x && m.y === y);
 const itemAt = (x, y) => G.items.find(i => i.x === x && i.y === y);
-const occupied = (x, y) => (G.player.x === x && G.player.y === y) || !!monAt(x, y);
+const owlAt = (x, y) => !!(G.owl && G.owl.hp > 0 && G.owl.x === x && G.owl.y === y);
+const occupied = (x, y) => (G.player.x === x && G.player.y === y) || !!monAt(x, y) || owlAt(x, y);
 const cornerOK = (x, y, dx, dy) => !(dx && dy) || (walk(x + dx, y) && walk(x, y + dy));
 const canStep = (x, y, dx, dy) => walk(x + dx, y + dy) && cornerOK(x, y, dx, dy);
 const realRooms = () => G.map.rooms.map((r, i) => [r, i]).filter(([r]) => !r.dummy);
@@ -788,7 +842,7 @@ function randomFloor(avoidRoom = -1) {
     const cand = realRooms().filter(([, i]) => i !== avoidRoom);
     const [r] = pick(cand.length ? cand : realRooms());
     const x = rint(r.x, r.x + r.w - 1), y = rint(r.y, r.y + r.h - 1);
-    if (isSpecial(x, y) || itemAt(x, y) || monAt(x, y) || (G.player.x === x && G.player.y === y)) continue;
+    if (isSpecial(x, y) || itemAt(x, y) || monAt(x, y) || owlAt(x, y) || (G.player.x === x && G.player.y === y)) continue;
     return { x, y };
   }
   return null;
@@ -802,13 +856,14 @@ function nextFloor() {
   const st = randomFloor();
   const pp = randomFloor(G.map.room[idx(st.x, st.y)]);
   p.x = pp.x; p.y = pp.y; p.rx = p.x; p.ry = p.y;
+  if (G.owl && G.owl.hp > 0) { G.owl.x = -1; placeOwl(); }
   if (G.floor < LAST) G.map.stairs = st;
   else G.items.push({ ...mkItem('gem'), ...st });
   if (G.floor % 5 === 0 && G.floor < LAST) { const c = randomFloor(); if (c) G.map.circle = c; }
   if (G.floor > META.deepest) META.deepest = G.floor;
   const luck = calcStats().luck;
   const nItems = rint(6, 9);
-  for (let i = 0; i < nItems; i++) { const pos = randomFloor(); if (pos) G.items.push({ ...genItem(G.floor, 0, luck), ...pos }); }
+  for (let i = 0; i < nItems; i++) { const pos = randomFloor(); if (pos) G.items.push({ ...fresh(genItem(G.floor, 0, luck)), ...pos }); }
   const nChest = rint(1, 2) + (G.floor % 5 === 0 ? 1 : 0);
   for (let i = 0; i < nChest; i++) {
     const pos = randomFloor(); if (!pos) continue;
@@ -830,6 +885,53 @@ function nextFloor() {
   if (G.items.some(i => i.k === 'bag')) msg('このフロアに 遺品の袋の気配がする…（地図にむらさきで表示）');
   if (G.map.circle) msg('このフロアには 帰還の魔法陣がある。');
   save(true);
+}
+// ---- Glaux the owl: follows Athena, pecks adjacent foes, hoots about mimics and treasure ----
+function placeOwl() {
+  const o = G.owl, p = G.player;
+  if (!o || o.hp <= 0) return;
+  for (const [dx, dy] of shuffle(DIRS8.slice())) {
+    const x = p.x + dx, y = p.y + dy;
+    if (walk(x, y) && !monAt(x, y)) { o.x = o.rx = x; o.y = o.ry = y; return; }
+  }
+  o.x = -1;
+}
+function owlTurn(distP) {
+  const o = G.owl, p = G.player;
+  if (!o || o.hp <= 0) return;
+  if (o.x < 0) { placeOwl(); return; }
+  o.reg = (o.reg || 0) + o.mhp / 150;
+  while (o.reg >= 1 && o.hp < o.mhp) { o.hp++; o.reg--; }
+  for (const m of G.monsters) {
+    if (m.disg && !m.hooted && cheb(m, p) <= 2) { m.hooted = 1; msg('グラウクス「ホー！ その宝箱は あやしい…」'); floatText(o.x, o.y, '!', '#ffe070'); }
+    if (MON[m.k].treasure && !m.hooted && VIS[idx(m.x, m.y)]) { m.hooted = 1; msg('グラウクス「ホッ！ きんぴかスライムだ！」'); floatText(o.x, o.y, '!', '#ffe070'); }
+  }
+  for (const it of G.items) {
+    if ((it.r || 0) >= 2 && !it.hooted && VIS[idx(it.x, it.y)]) { it.hooted = 1; msg('グラウクス「ホーホー！ あそこに いい物が ありそう」'); floatText(o.x, o.y, '!', RCOL[it.r]); break; }
+  }
+  const foe = G.monsters.filter(m => !m.disg && cheb(m, o) === 1 && cornerOK(o.x, o.y, m.x - o.x, m.y - o.y)).sort((a, b) => a.hp - b.hp)[0];
+  if (foe && cheb(o, p) <= 3) { owlAttack(foe); return; }
+  if (cheb(o, p) > 8 || distP[idx(o.x, o.y)] > 14) { placeOwl(); return; }
+  if (cheb(o, p) > 1) stepBy(o, distP);
+}
+function owlAttack(m) {
+  const o = G.owl, p = G.player, d = MON[m.k];
+  bump(o, m.x - o.x, m.y - o.y);
+  m.sleep = 0;
+  if (!chance(0.9)) { msg(`グラウクスの攻撃は ${d.n} にかわされた。`); return; }
+  const dmg = d.treasure ? 1 : Math.max(1, Math.round(vary(3 + p.lv * 0.9 + G.floor * 0.3 - m.def / 3)));
+  msg(`グラウクスの攻撃！ ${d.n} に ${dmg} のダメージ。`);
+  hurtMonster(m, dmg, '#a8f0b0');
+}
+function attackOwl(m) {
+  const o = G.owl, d = MON[m.k];
+  bump(m, o.x - m.x, o.y - m.y);
+  if (!chance(0.8)) { msg(`グラウクスは ${d.n} の攻撃を かわした。`); return; }
+  const dmg = Math.max(1, Math.round(vary(m.atk * 0.7)));
+  o.hp -= dmg; o.flash = now();
+  floatText(o.x, o.y, String(dmg), '#ff9090');
+  msg(`${d.n} の攻撃！ グラウクスに ${dmg} のダメージ。`);
+  if (o.hp <= 0) { o.hp = 0; o.x = -1; msg('グラウクスは 力つきて 神殿へ飛んで帰った…'); }
 }
 function spawnMonster(x, y, asleep, forceKey) {
   const f = G.floor;
@@ -1183,10 +1285,10 @@ function killMonster(m) {
   sfx('kill');
   if (m.gold > 0) dropItem({ ...mkItem('gold'), amt: m.gold }, m.x, m.y);
   if (d.treasure || m.k === 'mimic') {
-    const it = genEquip(pick(['weapon', 'shield', 'bracelet']), G.floor + 2, 25, st.luck, 2);
+    const it = fresh(genEquip(pick(['weapon', 'shield', 'bracelet']), G.floor + 2, 25, st.luck, 2));
     if (dropItem(it, m.x, m.y)) announceDrop(it);
   } else if (chance(0.11 + st.luck / 600)) {
-    const it = genItem(G.floor, 4, st.luck);
+    const it = fresh(genItem(G.floor, 4, st.luck));
     if (dropItem(it, m.x, m.y)) announceDrop(it);
   }
   gainExp(exp);
@@ -1203,6 +1305,7 @@ function levelUp() {
   p.lv++; p.mhp += up; p.hp += up;
   if (p.exp < EXP[p.lv]) p.exp = EXP[p.lv];
   msg(`アテナは レベル ${p.lv} に上がった！`);
+  if (G.owl && G.owl.hp > 0) { G.owl.mhp += 3; G.owl.hp += 3; }
   floatText(p.x, p.y, '+' + up, '#7cf09a');
   sfx('lvup');
 }
@@ -1303,6 +1406,8 @@ function monsterTurn(m, distP) {
   }
   if (sees && !m.flee) { m.aware = true; m.lx = p.x; m.ly = p.y; }
   if (!m.flee && cheb(m, p) === 1 && cornerOK(m.x, m.y, ddx, ddy)) { monsterAttack(m); return; }
+  const o = G.owl;
+  if (!m.flee && o && o.hp > 0 && o.x >= 0 && cheb(m, o) === 1 && cornerOK(m.x, m.y, o.x - m.x, o.y - m.y) && chance(0.5)) { attackOwl(m); return; }
   if (d.breath && sees && !m.flee && (ddx === 0 || ddy === 0 || Math.abs(ddx) === Math.abs(ddy)) && cheb(m, p) <= 7
       && clearLine(m.x, m.y, sign(ddx), sign(ddy), 7) && chance(0.4)) {
     const dmg = rint(d.breath[0], d.breath[1]);
@@ -1345,8 +1450,13 @@ function endTurn() {
   if (p.hp > mh) p.hp = mh;
   if (p.conf > 0 && --p.conf === 0) msg('混乱が なおった。');
   computeVis();
+  for (const s of ['w', 's', 'b']) {
+    const it = eqItem(s);
+    if (it && it.ui && (it.wt = (it.wt || 0) + 1) >= GEAR_ID_TURNS) revealGear(it, '装備していた ');
+  }
   if (p.hp > 0) {
     const distP = bfs(p.x, p.y);
+    owlTurn(distP);
     for (const m of G.monsters.slice()) {
       const acts = MON[m.k].fast ? 2 : 1;
       for (let a = 0; a < acts; a++) {
@@ -1405,7 +1515,7 @@ function pickUp(it) {
   return true;
 }
 function registerFind(it) {
-  if (it.seenFound) return;
+  if (it.seenFound || it.ui) return;
   it.seenFound = 1;
   if (it.r === 2) META.rares++;
   if (it.r === 3) META.legends++;
@@ -1420,6 +1530,7 @@ function openChest(it) {
   for (let i = 0; i < n; i++) {
     let loot = genItem(G.floor + (gold ? 2 : 0), gold ? 30 : 10, st.luck, true);
     if (gold && i === 0 && (!isEquip(loot) || loot.r < 2)) loot = genEquip(pick(['weapon', 'shield', 'bracelet']), G.floor + 2, 30, st.luck, 2);
+    fresh(loot);
     if (dropItem(loot, it.x, it.y, true)) announceDrop(loot);
   }
 }
@@ -1428,6 +1539,7 @@ function recoverBag(it) {
   G.items = G.items.filter(i => i !== it);
   if (!b) { msg('袋は からっぽだった。'); return; }
   META.bags = META.bags.filter(x => x !== b);
+  for (const x of b.items) { delete x.ui; delete x.wt; registerFind(x); }
   META.storage.unshift(...b.items);
   META.bank += b.gold;
   msg(`遺品の袋を 回収した！ 中身 ${b.items.length}個と ${b.gold}G は 神殿の倉庫に送られた。`);
@@ -1447,6 +1559,7 @@ function tryMove(dx, dy) {
   const m = monAt(p.x + dx, p.y + dy);
   if (m) { if (cornerOK(p.x, p.y, dx, dy)) { attackMonster(m); endTurn(); } return false; }
   if (!canStep(p.x, p.y, dx, dy)) return false;
+  if (owlAt(p.x + dx, p.y + dy)) { G.owl.x = p.x; G.owl.y = p.y; }
   p.x += dx; p.y += dy;
   afterStep();
   if (UI.mode !== 'play') return false;
@@ -1541,6 +1654,7 @@ function healPlayer(n, maxUp) {
 }
 function useItem(it) {
   const p = G.player, d = IT[it.k], st = calcStats();
+  if (d.c !== 'wand') learn(it.k);
   switch (it.k) {
     case 'bread': case 'bigbread':
       removeInv(it); sfx('eat');
@@ -1582,6 +1696,11 @@ function useItem(it) {
         hurtMonster(m, MON[m.k].treasure ? 1 : 20 + G.floor * 2, '#fff27a');
       });
       sfx('magic'); break;
+    case 's_ident':
+      removeInv(it); msg('識別の巻物を読んだ。');
+      if (G.player.inv.some(isUnknown)) UI.pendingIdent = true;
+      else msg('しかし 正体の わからない物は 持っていない。');
+      break;
     case 's_escape': removeInv(it); msg('脱出の巻物を読んだ。アテナの体が 光につつまれた…'); sfx('magic');
       UI.mode = 'busy'; { const g = G; setTimeout(() => { if (G === g) endRun('escape'); }, 800); } return false;
     default:
@@ -1592,15 +1711,17 @@ function useItem(it) {
 function zapWand(it) {
   const d = IT[it.k], p = G.player;
   bump(p, p.dir[0], p.dir[1]);
-  if (it.ch <= 0) { msg(`${d.n}を振った。しかし 何も起こらなかった。`); return true; }
+  const nm = kindUnknown(it.k) ? lookOf(it.k)[0] : d.n;
+  if (it.ch <= 0) { msg(`${nm}を振った。しかし 何も起こらなかった。`); return true; }
   it.ch--;
   const tg = lineTarget(10);
-  FX.bolts.push({ x0: p.x, y0: p.y, x1: tg.x, y1: tg.y, col: d.pal.c, t0: now(), dur: 180 });
+  FX.bolts.push({ x0: p.x, y0: p.y, x1: tg.x, y1: tg.y, col: palOf(it).c, t0: now(), dur: 180 });
   sfx('magic');
-  msg(`${d.n}を振った。`);
+  msg(`${nm}を振った。`);
   const m = tg.m;
   if (!m) { msg('魔法弾は 飛んでいった。'); return true; }
   revealMimic(m);
+  learn(it.k);
   const mn = MON[m.k].n;
   m.aware = true;
   switch (it.k) {
@@ -1626,16 +1747,16 @@ function throwItem(it) {
   removeInv(it);
   bump(p, p.dir[0], p.dir[1]);
   const tg = lineTarget(10);
-  FX.bolts.push({ x0: p.x, y0: p.y, x1: tg.x, y1: tg.y, spr: [d.s, d.pal], t0: now(), dur: 200 });
+  FX.bolts.push({ x0: p.x, y0: p.y, x1: tg.x, y1: tg.y, spr: [d.s, palOf(it)], t0: now(), dur: 200 });
   msg(`${itemName(it)} を 投げた。`);
   const m = tg.m;
   if (m && chance(0.9)) {
     const mn = MON[m.k].n;
     revealMimic(m);
     m.aware = true; m.sleep = 0;
-    if (it.k === 'herb' || it.k === 'hiherb') { m.hp = Math.min(m.maxHp, m.hp + (it.k === 'herb' ? 30 : 100)); msg(`${mn} の HPが 回復した。`); }
-    else if (it.k === 'sleepherb') { m.sleep = 12; msg(`${mn} は 眠ってしまった。`); }
-    else if (it.k === 'confherb') { m.conf = 12; msg(`${mn} は 混乱した。`); }
+    if (it.k === 'herb' || it.k === 'hiherb') { m.hp = Math.min(m.maxHp, m.hp + (it.k === 'herb' ? 30 : 100)); msg(`${mn} の HPが 回復した。`); learn(it.k); }
+    else if (it.k === 'sleepherb') { m.sleep = 12; msg(`${mn} は 眠ってしまった。`); learn(it.k); }
+    else if (it.k === 'confherb') { m.conf = 12; msg(`${mn} は 混乱した。`); learn(it.k); }
     else {
       const dmg = MON[m.k].treasure ? 1 : isEquip(it) ? powOf(it) + rint(2, 5) : rint(1, 2);
       msg(`${mn} に 当たった。`);
@@ -1671,18 +1792,22 @@ function startRun(floor) {
     player: { x: 0, y: 0, rx: 0, ry: 0, dir: [0, 1], hp: 20, mhp: 20, str: 8, mstr: 8, lv: 1, exp: 0,
       hunger: 100, mhunger: 100, hacc: 0, gold: 0, inv: META.inv, eq: { ...META.eq }, sleep: 0, conf: 0, regen: 0, flash: 0 },
     monsters: [], items: [], msgs: [], map: null,
+    owl: { x: -1, y: -1, rx: 0, ry: 0, hp: 12, mhp: 12, reg: 0, flash: 0 },
+    looks: makeLooks(), known: {},
   };
+  for (const it of META.inv) G.known[it.k] = 1;
   META.inv = []; META.eq = { w: 0, s: 0, b: 0 };
   G.player.hp = maxHp();
   UI.mode = 'play';
   nextFloor();
-  msg(`アテナは ディクテオンの洞窟 B${floor}F に 降りたった。`);
+  msg(`アテナは ディクテオンの迷宮 B${floor}F に 降りたった。`);
   renderHUD(); renderMsg();
 }
 function endRun(kind) {
   if (!G) return;
   const p = G.player, ok = kind !== 'dead';
   const res = { kind, floor: G.floor, lv: p.lv, gold: p.gold, kills: G.kills, turn: G.turn, cause: G.cause, n: p.inv.length, lost: null, bonus: null };
+  if (ok) for (const it of p.inv) { delete it.ui; delete it.wt; }
   for (const it of p.inv) registerFind(it);
   if (ok) {
     META.inv = p.inv; META.eq = { ...p.eq }; META.bank += p.gold;
@@ -1714,7 +1839,7 @@ function renderHUD() {
   el.innerHTML = `<div class="l"><span class="fl">B${G.floor}F</span><span>Lv<b>${p.lv}</b></span><span class="${low ? 'low' : ''}">HP ${p.hp}/${mh}</span>`
     + `<span class="bar"><i style="width:${Math.max(0, p.hp / mh * 100)}%;${low ? 'background:var(--hp-low)' : ''}"></i></span></div>`
     + `<div class="l"><span class="${p.hunger <= 10 ? 'low' : ''}">満腹 ${p.hunger}</span><span class="bar food"><i style="width:${p.hunger / p.mhunger * 100}%"></i></span>`
-    + `<span>力 ${p.str}</span><span><b>${p.gold}</b>G</span>${chips}</div>`;
+    + `<span>力 ${p.str}</span><span><b>${p.gold}</b>G</span>${G.owl ? `<span class="owlhp">梟${G.owl.hp > 0 ? G.owl.hp : '－'}</span>` : ''}${chips}</div>`;
   const fb = $('bF'), here = itemAt(p.x, p.y);
   const lab = onCircle() ? '帰還する' : onStairs() ? '階段' : canSwap(here) ? '交換' : here ? '拾う' : '足元';
   fb.textContent = lab; fb.classList.toggle('on', lab !== '足元');
@@ -1751,7 +1876,13 @@ function itemRow(it, i, opts = {}) {
 function openDetail(it, actions) {
   const d = IT[it.k], rc = 'r' + (it.r || 0);
   let base = '', cmp = '', afs = '', flavor = '';
-  if (isEquip(it)) {
+  const hidden = isEquip(it) && gearUnknown(it);
+  if (hidden) {
+    const c = d.c;
+    base = c === 'weapon' ? `攻撃力 ${d.pow} ＋？` : c === 'shield' ? `防御力 ${d.pow} ＋？` : '腕輪（追加性能のみ）';
+    afs = `<ul>${(it.af || []).map(() => '<li>？？？</li>').join('')}</ul>`;
+    cmp = `未識別。識別の巻物を読むか、${GEAR_ID_TURNS}ターン 装備しつづけるか、神殿に持ち帰ると 正体がわかる。`;
+  } else if (isEquip(it)) {
     const c = d.c;
     base = c === 'weapon' ? `攻撃力 ${powOf(it)}` : c === 'shield' ? `防御力 ${powOf(it)}` : '腕輪（追加性能のみ）';
     afs = `<ul>${(it.af || []).map(a => `<li>${esc(AF[a.t].l(a.v))}</li>`).join('')}</ul>`;
@@ -1763,9 +1894,10 @@ function openDetail(it, actions) {
     if (it.u) flavor = `<div class="flavor">${esc(UNIQ[it.u].f)}</div>`;
   }
   detail.innerHTML = `<div class="hd"><img alt="" src="${iconFor(it)}"><div><div class="nm ${rc}">${esc(itemName(it))}</div>`
-    + `<div class="rk">${isEquip(it) ? RNAME[it.r || 0] + ' ・ ' + ({ weapon:'武器', shield:'盾', bracelet:'腕輪' })[d.c] + (it.ilv ? ` ・ ${it.ilv}階相当` : '') : ''}</div></div></div>`
+    + `<div class="rk">${isEquip(it) ? RNAME[it.r || 0] + ' ・ ' + ({ weapon:'武器', shield:'盾', bracelet:'腕輪' })[d.c] + (hidden ? ' ・ 未識別' : it.ilv ? ` ・ ${it.ilv}階相当` : '') : ''}</div></div></div>`
     + (base ? `<div class="base">${base}</div>` : '') + afs + (cmp ? `<div class="cmp">${cmp}</div>` : '') + flavor
-    + (d.d && !isEquip(it) ? `<div class="ds">${esc(d.d)}</div>` : '')
+    + (kindUnknown(it.k) ? `<div class="ds">まだ正体の わからない${({ grass: d.s === 'seed' ? '実' : '草', scroll: '巻物', wand: '杖' })[d.c]}。使うか、識別の巻物で 正体が わかる。</div>`
+       : d.d && !isEquip(it) ? `<div class="ds">${esc(d.d)}</div>` : '')
     + `<div class="acts">${actions.map(([label, a, dis, cls]) => `<button type="button" class="nav ${cls || ''}" data-a="${a}" ${dis ? 'disabled' : ''}>${label}</button>`).join('')}</div>`;
   detail.hidden = false;
   focusFirst(detail);
@@ -1810,8 +1942,8 @@ function showTitle() {
   sheet.hidden = false; closeDetail(); closeDlg();
   const run = G;
   sheet.innerHTML = `<div class="panel title">
-    <h1>ディクテオンの洞窟</h1>
-    <div class="sub">女神アテナの宝さがし</div>
+    <h1>ディクテオンの迷宮</h1>
+    <div class="sub">女神あてなのお宝さがし</div>
     <canvas id="titleart" class="art" width="128" height="40" style="max-width:420px"></canvas>
     <div class="menu-list">
       ${run ? `<button type="button" class="big primary nav" data-a="continue">つづきから<small>B${run.floor}F ・ Lv${run.player.lv} で冒険中</small></button>`
@@ -1934,7 +2066,7 @@ ACTIONS.tToStore = () => moveItem(UI.sel, true);
 ACTIONS.tToInv = () => moveItem(UI.sel, false);
 
 // shop
-const SHOP = ['bread', 'bigbread', 'herb', 'hiherb', 'antidote', 'sleepherb', 's_map', 's_sleep', 's_escape', 'w_thunder', 'w_blow'];
+const SHOP = ['bread', 'bigbread', 'herb', 'hiherb', 'antidote', 'sleepherb', 's_ident', 's_map', 's_sleep', 's_escape', 'w_thunder', 'w_blow'];
 ACTIONS.tShop = () => { UI.shopTab = 'buy'; pushSheet(renderShop); };
 function renderShop() {
   const buy = UI.shopTab === 'buy';
@@ -2035,6 +2167,8 @@ function renderOpt() {
 function helpHTML() {
   return `<div class="note"><b>目的</b>：地下${LAST}階の「まぼろしの宝玉」。でも本当の楽しみは 宝さがし。<br>
     <b>装備の色</b>：<span class="r1">マジック</span>・<span class="r2">レア</span>・<span class="r3">伝説</span>・<span class="r4">神器</span>。光の柱が立ったら 良い物です。<br>
+    <b>識別</b>：草・実・巻物・杖は 冒険ごとに「赤い草」などの仮の名前で出てきます。使うと 正体がわかります。拾った装備は「？」付きで、追加性能が かくれています。識別の巻物、${GEAR_ID_TURNS}ターン装備しつづける、神殿へ持ち帰る、のどれかで 正体がわかります。<br>
+    <b>グラウクス</b>：アテナの相棒のフクロウ。ついてきて 敵をつつき、ミミックや いい物を 見つけると 鳴いて知らせます。ぶつかると 場所を入れかわります。たおれても 次の冒険で また来てくれます。<br>
     <b>宝箱</b>：上に乗るとあきます。たまにミミック。<b>きんぴかスライム</b>は逃げ足が速いけれど 倒すとレア以上を落とします。<br>
     <b>倒れたら</b>：持ち物とお金は「遺品の袋」としてその階に残ります。次の冒険でその階に行けば 回収でき、中身は倉庫へ届きます（袋は最大${BAG_MAX}つ）。<br>
     <b>操作</b>：十字キーで移動・斜め移動。画面をタップしても その方向へ動きます。ダッシュをONにすると 通路を走ります。「向き」をONにすると 向きだけ変えられます（杖・投げる方向）。</div>
@@ -2183,7 +2317,21 @@ function dungeonAct(fn) {
   const took = fn(it);
   if (took && UI.mode === 'play') endTurn();
   renderHUD(); save();
+  if (UI.pendingIdent && G && UI.mode === 'play') { UI.pendingIdent = false; UI.mode = 'menu'; pushSheet(renderIdent); }
 }
+function renderIdent() {
+  const p = G.player;
+  sheet.innerHTML = `<div class="panel">${head('識別する物をえらぶ')}
+    <div class="note">正体を 明かしたい物を 1つ えらんでください。</div>
+    <div class="sh-body">${p.inv.map((it, i) => isUnknown(it) ? itemRow(it, i, { eq: p.eq, act: 'identPick' }) : '').join('')}</div>
+  </div>`;
+}
+ACTIONS.identPick = d => {
+  const it = G.player.inv[+d.i];
+  closeSheet(); UI.mode = 'play';
+  if (isEquip(it)) revealGear(it, ''); else learn(it.k);
+  renderHUD(); save(true);
+};
 ACTIONS.dUse = () => dungeonAct(useItem);
 ACTIONS.dEquip = () => { const it = UI.sel; toggleEquip(it, G.player); renderHUD(); save(); rerender(); dDetail(it); };
 ACTIONS.dThrow = () => dungeonAct(throwItem);
@@ -2362,6 +2510,8 @@ function bumpOff(e, t) {
 }
 // owl-hood Athena: brown hood, silver hair, sky-blue eyes
 const ATHENA_PAL = { n:'#a07048', N:'#5a3a20', h:'#e8e8f8', u:'#40a0e0', R:'#d84860', o:'#f0a030' };
+const GEAR_ID_TURNS = 60;
+const OWL_PAL = { n:'#8a6040', N:'#5a3a20', l:'#f0e0c0' };
 const RCOL = ['#ffffff', '#79b0ff', '#ffd84a', '#cf97ff', '#ff8a3d'];
 function drawAthena(g, px, py, dir, flash, frame = 0) {
   const [dx, dy] = dir;
@@ -2390,6 +2540,7 @@ function frame(t) {
   ctx.imageSmoothingEnabled = false;
   const p = G.player, LW = VIEW.LW, LH = VIEW.LH;
   lerpEnt(p); G.monsters.forEach(lerpEnt);
+  if (G.owl && G.owl.x >= 0) lerpEnt(G.owl);
   let camX = Math.round(p.rx * T + T / 2 - LW / 2), camY = Math.round(p.ry * T + T / 2 - LH / 2);
   VIEW.camX = camX; VIEW.camY = camY;
   if (t - FX.shake < 180) { camX += rint(-2, 2); camY += rint(-1, 1); }
@@ -2402,7 +2553,7 @@ function frame(t) {
   for (const it of G.items) {
     if (!(M.explored[idx(it.x, it.y)] || G.mapRead || it.k === 'bag')) continue;
     const d = IT[it.k];
-    ctx.drawImage(spr(d.s, d.pal), it.x * T, it.y * T);
+    ctx.drawImage(spr(d.s, palOf(it)), it.x * T, it.y * T);
     if ((it.r || 0) >= 2 || it.k === 'bag' || it.k === 'gchest') {
       const ph = (t / 700 + it.id * 0.37) % 1;
       if (ph < 0.35) {
@@ -2444,6 +2595,18 @@ function frame(t) {
     if (m.hp < m.maxHp) {
       ctx.fillStyle = '#300'; ctx.fillRect(px + 2, py - 2, 12, 2);
       ctx.fillStyle = '#f05050'; ctx.fillRect(px + 2, py - 2, Math.max(1, Math.round(12 * m.hp / m.maxHp)), 2);
+    }
+  }
+  const o = G.owl;
+  if (o && o.hp > 0 && o.x >= 0 && M.explored[idx(o.x, o.y)]) {
+    const [ox, oy] = bumpOff(o, t), fr = tick(7);
+    const px = Math.round(o.rx * T + ox), py = Math.round(o.ry * T + oy) - 3 + fr;
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(px + 4, Math.round(o.ry * T) + 14, 8, 2);
+    const flash = t - o.flash < 200 && Math.floor((t - o.flash) / 50) % 2 === 0;
+    ctx.drawImage(spr('owl', OWL_PAL, flash, fr), px, py);
+    if (o.hp < o.mhp) {
+      ctx.fillStyle = '#132'; ctx.fillRect(px + 2, py - 2, 12, 2);
+      ctx.fillStyle = '#70e090'; ctx.fillRect(px + 2, py - 2, Math.max(1, Math.round(12 * o.hp / o.mhp)), 2);
     }
   }
   {
@@ -2501,6 +2664,7 @@ function drawMinimap(t) {
     if (m.disg) { if (M.explored[idx(m.x, m.y)] || G.mapRead) { ctx.fillStyle = '#ffd84a'; ctx.fillRect(ox + m.x * s + 1, oy + m.y * s + 1, Math.max(1, s - 2), Math.max(1, s - 2)); } continue; }
     if (VIS[idx(m.x, m.y)]) { ctx.fillStyle = MON[m.k].treasure ? '#ffe040' : '#ff4a4a'; ctx.fillRect(ox + m.x * s, oy + m.y * s, s - 1, s - 1); }
   }
+  if (G.owl && G.owl.hp > 0 && G.owl.x >= 0) { ctx.fillStyle = '#70e090'; ctx.fillRect(ox + G.owl.x * s, oy + G.owl.y * s, s - 1, s - 1); }
   ctx.globalAlpha = Math.floor(t / 300) % 2 ? 1 : 0.6;
   ctx.fillStyle = '#ffe24a'; ctx.fillRect(ox + G.player.x * s, oy + G.player.y * s, s, s);
   ctx.restore();

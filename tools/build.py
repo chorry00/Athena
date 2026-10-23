@@ -21,7 +21,7 @@ FONT_SRC = ROOT / 'tools' / 'DotGothic16-Regular.ttf'
 FONT_OUT = ROOT / 'fonts' / 'DotGothic16-subset.woff2'
 ICONS = ROOT / 'icons'
 
-APP_NAME = 'ディクテオンの洞窟'
+APP_NAME = 'ディクテオンの迷宮'
 SHORT_NAME = 'ディクテオン'
 BG = '#0b0a14'
 
@@ -141,7 +141,7 @@ if (navigator.storage && navigator.storage.persist) navigator.storage.persist().
 
     manifest = {
         'name': APP_NAME, 'short_name': SHORT_NAME, 'lang': 'ja',
-        'description': '女神アテナの宝さがしローグライク',
+        'description': '女神あてなのお宝さがし',
         'start_url': './', 'scope': './', 'display': 'standalone', 'orientation': 'portrait',
         'background_color': BG, 'theme_color': BG,
         'icons': [
